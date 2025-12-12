@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <title>打字練習（Lesson 2 & 3／拼音／注音）</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      margin: 20px;
+      background: #111827;
+      color: #e5e7eb;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #9ca3af;
+      margin-bottom: 12px;
+    }
+
+    .controls {
+      background: #1f2937;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .controls label {
+      font-size: 0.9rem;
+      color: #d1d5db;
+    }
+
+    .radio-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .radio-group label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+
+    .lesson-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .lesson-btn {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+    .lesson-btn.active {
+      background: #2563eb;
+      border-color: #2563eb;
+    }
+    .lesson-btn.disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    .card {
+      background: #1f2937;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+    }
+
+    #articleText {
+      font-size: 1.1rem;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      user-select: none;      /* 不能反白複製題目 */
+    }
+
+    #inputArea {
+      width: 100%;
+      min-height: 80px;
+      margin-top: 8px;
+      background: #111827;
+      border-radius: 8px;
+      color: #e5e7eb;
+      padding: 10px;
+      border: 1px solid #4b5563;
+      font-size: 1rem;
+      white-space: pre-wrap;
+    }
+
+    textarea:disabled {
+      opacity: 0.6;
+    }
+
+    #statusLine, #scoreLine, #roundInfo, #screenshotHint {
+      margin-top: 6px;
+      font-size: 0.9rem;
+    }
+
+    #statusLine {
+      color: #9ca3af;
+    }
+
+    #roundInfo {
+      color: #93c5fd;
+    }
+
+    #scoreLine {
+      color: #fde68a;
+    }
+
+    #screenshotHint {
+      color: #fef3c7;
+      margin-top: 12px;
+    }
+
+    .char-default {
+      color: #e5e7eb;
+    }
+    .char-correct {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    .char-wrong {
+      color: #f87171;
+      font-weight: 600;
+    }
+
+    .answer-phonetic {
+      font-size: 0.7rem;
+      margin-left: 2px;
+    }
+
+    .buttons-row {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      padding: 6px 12px;
+      border-radius: 8px;
+      border: 1px solid #4b5563;
+      background: #111827;
+      color: #e5e7eb;
+      font-size: 0.95rem;
+      cursor: pointer;
+    }
+
+    button[disabled] {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      background: #374151;
+      color: #e5e7eb;
+      margin-left: 6px;
+    }
+  </style>
+</head>
+<body>
+  <h1>打字練習工具<span class="tag">Lesson 2 & 3</span></h1>
+  <p class="subtitle">
+    1. 選擇「拼音」或「注音」。2. 選擇 Lesson。3. 依照文章輸入<span style="text-decoration:underline;">不含空格</span>的拼音／注音。<br>
+    同一行的內容打在同一行；系統會「逐行」計算，不會互相影響。<br>
+    作答頁：錯字變紅；公布答案頁：打對綠色，打錯紅色。
+  </p>
+
+  <div class="controls">
+    <div>
+      <label>輸入模式</label>
+      <div class="radio-group">
+        <label><input type="radio" name="inputMode" value="pinyin"> 拼音</label>
+        <label><input type="radio" name="inputMode" value="zhuyin"> 注音</label>
+      </div>
+    </div>
+
+    <div>
+      <label>Lesson</label>
+      <div class="lesson-bar">
+        <button class="lesson-btn disabled" data-lesson="1" disabled>Lesson 1 (coming soon)</button>
+        <button class="lesson-btn active" data-lesson="2">Lesson 2</button>
+        <button class="lesson-btn" data-lesson="3">Lesson 3</button>
+        <button class="lesson-btn disabled" data-lesson="4" disabled>Lesson 4 (coming soon)</button>
+        <button class="lesson-btn disabled" data-lesson="5" disabled>Lesson 5 (coming soon)</button>
+      </div>
+    </div>
+
+    <div>
+      <label>目前狀態</label>
+      <div id="roundInfo">尚未開始（請先選輸入模式）。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-top:0;">文章出現內容</h2>
+    <div id="articleText">請先選擇輸入模式。</div>
+  </div>
+
+  <div class="card">
+    <h2 style="font-size:1.1rem;margin-top:0;">輸入區（請打「連在一起」的拼音或注音）</h2>
+    <textarea id="inputArea" placeholder="請先選擇輸入模式。" disabled></textarea>
+    <div id="statusLine"></div>
+    <div id="scoreLine"></div>
+    <div id="screenshotHint"></div>
+    <div class="buttons-row">
+      <button id="finishBtn" disabled>第一次完成</button>
+      <button id="nextBtn" style="display:none;"></button>
+    </div>
+  </div>
+
+  <script>
+    // ==== 課文資料 ====
+    const lessons = {
+      // Lesson 2：前一版已存在
+      "2": {
+        hanzi:
+`一般來說，捷運站附近的房子，房租比較貴
+你們一起說話，都把我弄糊塗了
+在週年慶時買東西東西比要便宜，再說，百貨公司的商品品質比較好。
+請幫老師把英文翻譯成中文。
+這些菜的做法雖然簡單，但味道並不差。
+一般來說，百貨公司的東西都比較貴，尤其是大牌子的商品。
+這家店不能刷卡，爸爸只好付現金。`,
+        pinyinSyllables: [
+          // 一般來說，捷運站附近的房子，房租比較貴
+          "yi4","ban1","lai2","shuo1",
+          "jie2","yun4","zhan4","fu4","jin4","de5","fang2","zi5",
+          "fang2","zu1","bi3","jiao4","gui4",
+          // 你們一起說話，都把我弄糊塗了
+          "ni3","men5","yi4","qi3","shuo1","hua4",
+          "dou1","ba3","wo3","nong4","hu2","tu2","le5",
+          // 在週年慶時買東西東西比要便宜，再說，百貨公司的商品品質比較好。
+          "zai4","zhou1","nian2","qing4","shi2","mai3",
+          "dong1","xi1","dong1","xi1","bi3","yao4","pian2","yi2",
+          "zai4","shuo1",
+          "bai3","huo4","gong1","si1","de5","shang1","pin3","pin3","zhi4","bi3","jiao4","hao3",
+          // 請幫老師把英文翻譯成中文。
+          "qing3","bang1","lao3","shi1","ba3","ying1","wen2","fan1","yi4","cheng2","zhong1","wen2",
+          // 這些菜的做法雖然簡單，但味道並不差。
+          "zhe4","xie1","cai4","de5","zuo4","fa3","sui1","ran2","jian3","dan1","dan4","wei4","dao4","bing4","bu4","cha4",
+          // 一般來說，百貨公司的東西都比較貴，尤其是大牌子的商品。
+          "yi4","ban1","lai2","shuo1",
+          "bai3","huo4","gong1","si1","de5","dong1","xi1","dou1","bi3","jiao4","gui4",
+          "you2","qi2","shi4","da4","pai2","zi5","de5","shang1","pin3",
+          // 這家店不能刷卡，爸爸只好付現金。
+          "zhe4","jia1","dian4","bu4","neng2","shua1","ka3",
+          "ba4","ba5","zhi3","hao3","fu4","xian4","jin1"
+        ],
+        zhuyinSyllables: [
+          // 一般來說，捷運站附近的房子，房租比較貴
+          "ㄧˋ","ㄅㄢ","ㄌㄞˊ","ㄕㄨㄛ",
+          "ㄐㄧㄝˊ","ㄩㄣˋ","ㄓㄢˋ","ㄈㄨˋ","ㄐㄧㄣˋ","ㄉㄜ˙","ㄈㄤˊ","ㄗ˙",
+          "ㄈㄤˊ","ㄗㄨ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄍㄨㄟˋ",
+          // 你們一起說話，都把我弄糊塗了
+          "ㄋㄧˇ","ㄇㄣ˙","ㄧˋ","ㄑㄧˇ","ㄕㄨㄛ","ㄏㄨㄚˋ",
+          "ㄉㄡ","ㄅㄚˇ","ㄨㄛˇ","ㄋㄨㄥˋ","ㄏㄨˊ","ㄊㄨˊ","ㄌㄜ˙",
+          // 在週年慶時買東西東西比要便宜，再說，百貨公司的商品品質比較好。
+          "ㄗㄞˋ","ㄓㄡ","ㄋㄧㄢˊ","ㄑㄧㄥˋ","ㄕˊ","ㄇㄞˇ",
+          "ㄉㄨㄥ","ㄒㄧ","ㄉㄨㄥ","ㄒㄧ","ㄅㄧˇ","ㄧㄠˋ","ㄆㄧㄢˊ","ㄧˊ",
+          "ㄗㄞˋ","ㄕㄨㄛ",
+          "ㄅㄞˇ","ㄏㄨㄛˋ","ㄍㄨㄥ","ㄙ","ㄉㄜ˙","ㄕㄤ","ㄆㄧㄣˇ","ㄆㄧㄣˇ","ㄓˋ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄏㄠˇ",
+          // 請幫老師把英文翻譯成中文。
+          "ㄑㄧㄥˇ","ㄅㄤ","ㄌㄠˇ","ㄕ","ㄅㄚˇ","ㄧㄥ","ㄨㄣˊ","ㄈㄢ","ㄧˋ","ㄔㄥˊ","ㄓㄨㄥ","ㄨㄣˊ",
+          // 這些菜的做法雖然簡單，但味道並不差。
+          "ㄓㄜˋ","ㄒㄧㄝ","ㄘㄞˋ","ㄉㄜ˙","ㄗㄨㄛˋ","ㄈㄚˇ","ㄙㄨㄟ","ㄖㄢˊ","ㄐㄧㄢˇ","ㄉㄢ","ㄉㄢˋ","ㄨㄟˋ","ㄉㄠˋ","ㄅㄧㄥˋ","ㄅㄨˋ","ㄔㄚˋ",
+          // 一般來說，百貨公司的東西都比較貴，尤其是大牌子的商品。
+          "ㄧˋ","ㄅㄢ","ㄌㄞˊ","ㄕㄨㄛ",
+          "ㄅㄞˇ","ㄏㄨㄛˋ","ㄍㄨㄥ","ㄙ","ㄉㄜ˙","ㄉㄨㄥ","ㄒㄧ","ㄉㄡ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄍㄨㄟˋ",
+          "ㄧㄡˊ","ㄑㄧˊ","ㄕˋ","ㄉㄚˋ","ㄆㄞˊ","ㄗ˙","ㄉㄜ˙","ㄕㄤ","ㄆㄧㄣˇ",
+          // 這家店不能刷卡，爸爸只好付現金。
+          "ㄓㄜˋ","ㄐㄧㄚ","ㄉㄧㄢˋ","ㄅㄨˋ","ㄋㄥˊ","ㄕㄨㄚ","ㄎㄚˇ",
+          "ㄅㄚˋ","ㄅㄚ˙","ㄓˇ","ㄏㄠˇ","ㄈㄨˋ","ㄒㄧㄢˋ","ㄐㄧㄣ"
+        ]
+      },
+
+      // Lesson 3：你提供的新課文（依台灣發音標）
+      "3": {
+        hanzi:
+`華人的重要節日，大部分都是根據農曆來的。
+除夕這一天，大家會一起祭祖然後吃年夜飯。
+端午節在農曆五月，天氣熱起來，蚊蟲也越來越多，所以大家會帶香包，門上會掛植物，希望可以趕走瘟疫。
+秋天是收成的季節，大家收成完後以後，剛好是中秋節，大家可以一起休息賞月吃月餅。
+台灣的天氣很潮濕，一定要買除濕機，不然東西都會發霉。
+台灣是個海島國家，天氣仍易受到海風影響，很不穩定。
+台灣的冬天雖然溫度不高，但因為濕度比較高，所以實際感覺比較冷。`,
+        pinyinSyllables: [
+          // 華人的重要節日，大部分都是根據農曆來的。
+          "hua2","ren2","de5","zhong4","yao4","jie2","ri4",
+          "da4","bu4","fen4","dou1","shi4","gen1","ju4","nong2","li4","lai2","de5",
+          // 除夕這一天，大家會一起祭祖然後吃年夜飯。
+          "chu2","xi1","zhe4","yi4","tian1",
+          "da4","jia1","hui4","yi4","qi3","ji4","zu3","ran2","hou4","chi1","nian2","ye4","fan4",
+          // 端午節在農曆五月，天氣熱起來，蚊蟲也越來越多，所以大家會帶香包，門上會掛植物，希望可以趕走瘟疫。
+          "duan1","wu3","jie2","zai4","nong2","li4","wu3","yue4",
+          "tian1","qi4","re4","qi3","lai2",
+          "wen2","chong2","ye3","yue4","lai2","yue4","duo1",
+          "suo3","yi3","da4","jia1","hui4","dai4","xiang1","bao1",
+          "men2","shang4","hui4","gua4","zhi2","wu4",
+          "xi1","wang4","ke3","yi3","gan3","zou3","wen1","yi4",
+          // 秋天是收成的季節，大家收成完後以後，剛好是中秋節，大家可以一起休息賞月吃月餅。
+          "qiu1","tian1","shi4","shou1","cheng2","de5","ji4","jie2",
+          "da4","jia1","shou1","cheng2","wan2","hou4","yi3","hou4",
+          "gang1","hao3","shi4","zhong1","qiu1","jie2",
+          "da4","jia1","ke3","yi3","yi4","qi3","xiu1","xi2","shang3","yue4","chi1","yue4","bing3",
+          // 台灣的天氣很潮濕，一定要買除濕機，不然東西都會發霉。
+          "tai2","wan1","de5","tian1","qi4","hen3","chao2","shi1",
+          "yi2","ding4","yao4","mai3","chu2","shi1","ji1",
+          "bu4","ran2","dong1","xi1","dou1","hui4","fa1","mei2",
+          // 台灣是個海島國家，天氣仍易受到海風影響，很不穩定。
+          "tai2","wan1","shi4","ge4","hai3","dao3","guo2","jia1",
+          "tian1","qi4","reng2","yi4","shou4","dao4","hai3","feng1","ying3","xiang3",
+          "hen3","bu4","wen3","ding4",
+          // 台灣的冬天雖然溫度不高，但因為濕度比較高，所以實際感覺比較冷。
+          "tai2","wan1","de5","dong1","tian1","sui1","ran2","wen1","du4","bu4","gao1",
+          "dan4","yin1","wei4","shi1","du4","bi3","jiao4","gao1",
+          "suo3","yi3","shi2","ji4","gan3","jue2","bi3","jiao4","leng3"
+        ],
+        zhuyinSyllables: [
+          // 華人的重要節日，大部分都是根據農曆來的。
+          "ㄏㄨㄚˊ","ㄖㄣˊ","ㄉㄜ˙","ㄓㄨㄥˋ","ㄧㄠˋ","ㄐㄧㄝˊ","ㄖˋ",
+          "ㄉㄚˋ","ㄅㄨˋ","ㄈㄣˋ","ㄉㄡ","ㄕˋ","ㄍㄣ","ㄐㄩˋ","ㄋㄨㄥˊ","ㄌㄧˋ","ㄌㄞˊ","ㄉㄜ˙",
+          // 除夕這一天，大家會一起祭祖然後吃年夜飯。
+          "ㄔㄨˊ","ㄒㄧ","ㄓㄜˋ","ㄧˋ","ㄊㄧㄢ",
+          "ㄉㄚˋ","ㄐㄧㄚ","ㄏㄨㄟˋ","ㄧˋ","ㄑㄧˇ","ㄐㄧˋ","ㄗㄨˇ","ㄖㄢˊ","ㄏㄡˋ","ㄔ","ㄋㄧㄢˊ","ㄧㄝˋ","ㄈㄢˋ",
+          // 端午節在農曆五月，天氣熱起來，蚊蟲也越來越多，所以大家會帶香包，門上會掛植物，希望可以趕走瘟疫。
+          "ㄉㄨㄢ","ㄨˇ","ㄐㄧㄝˊ","ㄗㄞˋ","ㄋㄨㄥˊ","ㄌㄧˋ","ㄨˇ","ㄩㄝˋ",
+          "ㄊㄧㄢ","ㄑㄧˋ","ㄖㄜˋ","ㄑㄧˇ","ㄌㄞˊ",
+          "ㄨㄣˊ","ㄔㄨㄥˊ","ㄧㄝˇ","ㄩㄝˋ","ㄌㄞˊ","ㄩㄝˋ","ㄉㄨㄛ",
+          "ㄙㄨㄛˇ","ㄧˇ","ㄉㄚˋ","ㄐㄧㄚ","ㄏㄨㄟˋ","ㄉㄞˋ","ㄒㄧㄤ","ㄅㄠ",
+          "ㄇㄣˊ","ㄕㄤˋ","ㄏㄨㄟˋ","ㄍㄨㄚˋ","ㄓˊ","ㄨˋ",
+          "ㄒㄧ","ㄨㄤˋ","ㄎㄜˇ","ㄧˇ","ㄍㄢˇ","ㄗㄡˇ","ㄨㄣ","ㄧˋ",
+          // 秋天是收成的季節，大家收成完後以後，剛好是中秋節，大家可以一起休息賞月吃月餅。
+          "ㄑㄧㄡ","ㄊㄧㄢ","ㄕˋ","ㄕㄡ","ㄔㄥˊ","ㄉㄜ˙","ㄐㄧˋ","ㄐㄧㄝˊ",
+          "ㄉㄚˋ","ㄐㄧㄚ","ㄕㄡ","ㄔㄥˊ","ㄨㄢˊ","ㄏㄡˋ","ㄧˇ","ㄏㄡˋ",
+          "ㄍㄤ","ㄏㄠˇ","ㄕˋ","ㄓㄨㄥ","ㄑㄧㄡ","ㄐㄧㄝˊ",
+          "ㄉㄚˋ","ㄐㄧㄚ","ㄎㄜˇ","ㄧˇ","ㄧˋ","ㄑㄧˇ","ㄒㄧㄡ","ㄒㄧˊ","ㄕㄤˇ","ㄩㄝˋ","ㄔ","ㄩㄝˋ","ㄅㄧㄥˇ",
+          // 台灣的天氣很潮濕，一定要買除濕機，不然東西都會發霉。
+          "ㄊㄞˊ","ㄨㄢ","ㄉㄜ˙","ㄊㄧㄢ","ㄑㄧˋ","ㄏㄣˇ","ㄔㄠˊ","ㄕ",
+          "ㄧˊ","ㄉㄧㄥˋ","ㄧㄠˋ","ㄇㄞˇ","ㄔㄨˊ","ㄕ","ㄐㄧ",
+          "ㄅㄨˋ","ㄖㄢˊ","ㄉㄨㄥ","ㄒㄧ","ㄉㄡ","ㄏㄨㄟˋ","ㄈㄚ","ㄇㄟˊ",
+          // 台灣是個海島國家，天氣仍易受到海風影響，很不穩定。
+          "ㄊㄞˊ","ㄨㄢ","ㄕˋ","ㄍㄜˋ","ㄏㄞˇ","ㄉㄠˇ","ㄍㄨㄛˊ","ㄐㄧㄚ",
+          "ㄊㄧㄢ","ㄑㄧˋ","ㄖㄥˊ","ㄧˋ","ㄕㄡˋ","ㄉㄠˋ","ㄏㄞˇ","ㄈㄥ","ㄧㄥˇ","ㄒㄧㄤˇ",
+          "ㄏㄣˇ","ㄅㄨˋ","ㄨㄣˇ","ㄉㄧㄥˋ",
+          // 台灣的冬天雖然溫度不高，但因為濕度比較高，所以實際感覺比較冷。
+          "ㄊㄞˊ","ㄨㄢ","ㄉㄜ˙","ㄉㄨㄥ","ㄊㄧㄢ","ㄙㄨㄟ","ㄖㄢˊ","ㄨㄣ","ㄉㄨˋ","ㄅㄨˋ","ㄍㄠ",
+          "ㄉㄢˋ","ㄧㄣ","ㄨㄟˋ","ㄕ","ㄉㄨˋ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄍㄠ",
+          "ㄙㄨㄛˇ","ㄧˇ","ㄕˊ","ㄐㄧˋ","ㄍㄢˇ","ㄐㄩㄝˊ","ㄅㄧˇ","ㄐㄧㄠˋ","ㄌㄥˇ"
+        ]
+      }
+    };
+
+    const zhuyinTones = ["ˊ","ˇ","ˋ","˙"];
+    const pinyinToneDigits = ["1","2","3","4","5"];
+
+    let currentMode = null;      // 'pinyin' or 'zhuyin'
+    let currentLesson = "2";
+    let phase = "idle";          // idle / attempt / review
+    let currentAttempt = 1;      // 1, 2, 3
+    const maxAttempts = 3;
+
+    const attemptInputs = { 1: "", 2: "", 3: "" };
+    const attemptResults = { 1: null, 2: null, 3: null };
+
+    let fullscreenInterval = null;
+
+    const modeRadios = document.querySelectorAll('input[name="inputMode"]');
+    const lessonButtons = document.querySelectorAll('.lesson-btn');
+    const roundInfo = document.getElementById("roundInfo");
+    const articleText = document.getElementById("articleText");
+    const inputArea = document.getElementById("inputArea");
+    const statusLine = document.getElementById("statusLine");
+    const scoreLine = document.getElementById("scoreLine");
+    const screenshotHint = document.getElementById("screenshotHint");
+    const finishBtn = document.getElementById("finishBtn");
+    const nextBtn = document.getElementById("nextBtn");
+
+    // === 禁止複製題目 ===
+    articleText.addEventListener("copy", (e) => {
+      e.preventDefault();
+      alert("這是打字練習，請不要複製題目喔！");
+    });
+    articleText.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+    });
+
+    // === 禁止輸入框貼上 / 拖拉 ===
+    inputArea.addEventListener("paste", (e) => {
+      e.preventDefault();
+      alert("這是打字練習，請不要使用貼上喔！");
+    });
+    inputArea.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "v" || e.key === "V")) {
+        e.preventDefault();
+        alert("這是打字練習，請不要使用貼上喔！");
+      }
+    });
+    inputArea.addEventListener("drop", (e) => {
+      e.preventDefault();
+    });
+
+    // === 輸入模式切換 ===
+    modeRadios.forEach(radio => {
+      radio.addEventListener("change", () => {
+        currentMode = radio.value;
+        if (!lessons[currentLesson]) return;
+        startFirstAttempt();
+      });
+    });
+
+    // === Lesson bar ===
+    lessonButtons.forEach(btn => {
+      btn.addEventListener("click", () => {
+        if (btn.classList.contains("disabled")) return;
+        lessonButtons.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentLesson = btn.dataset.lesson;
+        if (!currentMode) {
+          roundInfo.textContent = "請先選擇輸入模式。";
+          return;
+        }
+        startFirstAttempt();
+      });
+    });
+
+    function startFirstAttempt() {
+      phase = "attempt";
+      currentAttempt = 1;
+      statusLine.textContent = "";
+      scoreLine.textContent = "";
+      screenshotHint.textContent = "";
+      attemptInputs[1] = attemptInputs[2] = attemptInputs[3] = "";
+      attemptResults[1] = attemptResults[2] = attemptResults[3] = null;
+
+      inputArea.value = "";
+      inputArea.disabled = false;
+      inputArea.placeholder = `第 1 次：請輸入連在一起的${currentMode === "pinyin" ? "拼音" : "注音"}。（同一行打在同一行，可自行換行）`;
+
+      finishBtn.disabled = false;
+      finishBtn.textContent = "第一次完成";
+      finishBtn.style.display = "inline-block";
+      nextBtn.style.display = "none";
+
+      roundInfo.textContent = `Lesson ${currentLesson} ｜ 第 1 次輸入`;
+      renderArticlePlain();
+      inputArea.focus();
+
+      enterFullscreenForAttempt();
+    }
+
+    function renderArticlePlain() {
+      const lesson = lessons[currentLesson];
+      if (!lesson) {
+        articleText.textContent = "此 Lesson 尚未提供內容。";
+        return;
+      }
+      const lines = lesson.hanzi.split('\n');
+      let html = "";
+      lines.forEach((line, idx) => {
+        for (const ch of line) {
+          if (isChineseChar(ch)) {
+            html += `<span class="char-default">${ch}</span>`;
+          } else {
+            html += ch;
+          }
+        }
+        if (idx < lines.length - 1) {
+          html += "<br>";
+        }
+      });
+      articleText.innerHTML = html;
+    }
+
+    // === 作答中：錯字紅色 ===
+    inputArea.addEventListener("input", () => {
+      if (phase !== "attempt" || !currentMode) return;
+      const evalResult = evaluateTyping(inputArea.value);
+      renderArticleWithColors(evalResult, "attempt");
+      statusLine.textContent =
+        `本次輸入：正確字數 ${evalResult.correctChars}／${evalResult.totalChars}`;
+    });
+
+    // === 完成本輪 ===
+    finishBtn.addEventListener("click", () => {
+      if (phase !== "attempt") return;
+      const evalResult = evaluateTyping(inputArea.value);
+      attemptInputs[currentAttempt] = inputArea.value;
+      attemptResults[currentAttempt] = evalResult;
+
+      phase = "review";
+      inputArea.value = "";
+      inputArea.disabled = true;
+      inputArea.placeholder = "本頁面僅檢視答案與分數。";
+
+      // 公布答案：對的綠、錯的紅，顯示注音/拼音
+      renderArticleWithColors(evalResult, "review");
+
+      const { correctSymbols, wrongSymbols, totalSymbols } = evalResult;
+      scoreLine.textContent =
+        `本次分數：${correctSymbols} / ${totalSymbols}（錯誤符號 ${wrongSymbols} 個，一個符號扣一分）`;
+      statusLine.textContent = `第 ${currentAttempt} 次練習完成。`;
+
+      finishBtn.style.display = "none";
+      nextBtn.style.display = "inline-block";
+
+      if (currentAttempt === 1) {
+        nextBtn.textContent = "Second try";
+      } else if (currentAttempt === 2) {
+        nextBtn.textContent = "third try";
+      } else if (currentAttempt === 3) {
+        nextBtn.style.display = "none";
+        showFinalScreenshotHint();
+      }
+
+      if (currentAttempt === 3) {
+        roundInfo.textContent = `Lesson ${currentLesson} ｜ 第 3 次結果`;
+      } else {
+        roundInfo.textContent = `Lesson ${currentLesson} ｜ 第 ${currentAttempt} 次結果`;
+      }
+
+      exitFullscreenIfNeeded();
+    });
+
+    // === 進入下一輪作答 ===
+    nextBtn.addEventListener("click", () => {
+      if (phase !== "review") return;
+      if (currentAttempt >= maxAttempts) return;
+
+      currentAttempt += 1;
+      phase = "attempt";
+      inputArea.disabled = false;
+      inputArea.value = "";
+      inputArea.placeholder = `第 ${currentAttempt} 次：請輸入連在一起的${currentMode === "pinyin" ? "拼音" : "注音"}。（同一行打在同一行，可自行換行）`;
+
+      scoreLine.textContent = "";
+      screenshotHint.textContent = "";
+      statusLine.textContent = "";
+
+      renderArticlePlain();
+
+      finishBtn.style.display = "inline-block";
+      nextBtn.style.display = "none";
+      if (currentAttempt === 2) {
+        finishBtn.textContent = "第二次完成";
+      } else if (currentAttempt === 3) {
+        finishBtn.textContent = "最後一次完成";
+      }
+
+      roundInfo.textContent = `Lesson ${currentLesson} ｜ 第 ${currentAttempt} 次輸入`;
+      inputArea.focus();
+
+      enterFullscreenForAttempt();
+    });
+
+    function showFinalScreenshotHint() {
+      screenshotHint.textContent =
+        "Please take a screenshot of this page and upload it to Google Classroom.";
+    }
+
+    // === 評分核心：逐行，不互相影響 ===
+    function evaluateTyping(typedRaw) {
+      const lesson = lessons[currentLesson];
+      if (!lesson) return null;
+      const syllables = currentMode === "pinyin"
+        ? lesson.pinyinSyllables
+        : lesson.zhuyinSyllables;
+
+      const hanziLines = lesson.hanzi.split('\n');
+      const typedLines = (typedRaw || "").split('\n');
+
+      const perChar = [];
+
+      let globalSyllIndex = 0;
+      let correctChars = 0;
+      let wrongChars = 0;
+      let totalChars = 0;
+
+      let correctSymbols = 0;
+      let wrongSymbols = 0;
+      let totalSymbols = 0;
+
+      hanziLines.forEach((lineText, lineIdx) => {
+        const typedLineRaw = typedLines[lineIdx] || "";
+        const typedLine = typedLineRaw.replace(/\s+/g, ""); // 只移除該行空白
+
+        let linePos = 0;
+
+        for (const ch of lineText) {
+          if (!isChineseChar(ch)) {
+            perChar.push({ char: ch, isChinese: false, isLineBreak: false });
+            continue;
+          }
+
+          const syl = syllables[globalSyllIndex] || "";
+          const targetChars = syl.split("");
+          const sylLen = targetChars.length;
+          totalChars++;
+          totalSymbols += sylLen;
+
+          const remaining = typedLine.slice(linePos);
+          let advLen = Math.min(remaining.length, sylLen);
+          let typedPart = remaining.slice(0, advLen);
+
+          // 不輸入聲調時，避免整串位移（注音）
+          if (currentMode === "zhuyin" && sylLen > 1 && zhuyinTones.includes(targetChars[sylLen - 1])) {
+            const base = targetChars.slice(0, sylLen - 1).join("");
+            const baseTyped = remaining.slice(0, sylLen - 1);
+            if (baseTyped === base && (remaining.length === sylLen - 1 || !zhuyinTones.includes(remaining[sylLen - 1]))) {
+              advLen = Math.min(remaining.length, sylLen - 1);
+              typedPart = remaining.slice(0, advLen);
+            }
+          }
+
+          // 不輸入數字聲調時，避免整串位移（拼音）
+          if (currentMode === "pinyin" && sylLen > 1 && pinyinToneDigits.includes(targetChars[sylLen - 1])) {
+            const base = targetChars.slice(0, sylLen - 1).join("");
+            const baseTyped = remaining.slice(0, sylLen - 1);
+            if (baseTyped === base && (remaining.length === sylLen - 1 || !pinyinToneDigits.includes(remaining[sylLen - 1]))) {
+              advLen = Math.min(remaining.length, sylLen - 1);
+              typedPart = remaining.slice(0, advLen);
+            }
+          }
+
+          // 符號分數
+          const typedForThisSyl = typedPart.split("");
+          for (let j = 0; j < sylLen; j++) {
+            const targetSymbol = targetChars[j];
+            const typedSymbol = typedForThisSyl[j];
+            if (typedSymbol === undefined) {
+              wrongSymbols++;
+            } else if (typedSymbol === targetSymbol) {
+              correctSymbols++;
+            } else {
+              wrongSymbols++;
+            }
+          }
+
+          // 字層級（完全相同才算對）
+          let status = "none";
+          if (typedPart.length === 0) {
+            status = "none";
+            wrongChars++;
+          } else if (typedPart === syl) {
+            status = "correct";
+            correctChars++;
+          } else {
+            status = "wrong";
+            wrongChars++;
+          }
+
+          perChar.push({
+            char: ch,
+            isChinese: true,
+            isLineBreak: false,
+            syl,
+            status
+          });
+
+          linePos += advLen;
+          globalSyllIndex++;
+        }
+
+        if (lineIdx < hanziLines.length - 1) {
+          perChar.push({
+            char: "\n",
+            isChinese: false,
+            isLineBreak: true
+          });
+        }
+      });
+
+      return {
+        perChar,
+        correctChars,
+        wrongChars,
+        totalChars,
+        correctSymbols,
+        wrongSymbols,
+        totalSymbols
+      };
+    }
+
+    // === 顯示文章（依模式決定顏色與是否顯示拼音/注音） ===
+    // mode: "attempt"（作答） / "review"（公布答案）
+    function renderArticleWithColors(evalResult, mode) {
+      if (!evalResult) {
+        renderArticlePlain();
+        return;
+      }
+      let html = "";
+      for (const item of evalResult.perChar) {
+        if (item.isLineBreak) {
+          html += "<br>";
+          continue;
+        }
+        if (!item.isChinese) {
+          html += item.char;
+          continue;
+        }
+
+        let cls = "char-default";
+
+        if (mode === "attempt") {
+          // 作答中：錯字紅，其他維持原色
+          if (item.status === "wrong") {
+            cls = "char-wrong";
+          } else {
+            cls = "char-default";
+          }
+          html += `<span class="${cls}">${item.char}</span>`;
+        } else {
+          // 公布答案：對的綠，錯或沒打紅
+          if (item.status === "correct") {
+            cls = "char-correct";
+          } else {
+            cls = "char-wrong";
+          }
+          html += `<span class="${cls}">${item.char}<span class="answer-phonetic">(${item.syl})</span></span>`;
+        }
+      }
+      articleText.innerHTML = html;
+    }
+
+    function isChineseChar(ch) {
+      return /[\u4e00-\u9fff]/.test(ch);
+    }
+
+    // === 全螢幕（只在作答頁啟用） ===
+    function enterFullscreenForAttempt() {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+      if (!fullscreenInterval) {
+        fullscreenInterval = setInterval(() => {
+          if (phase === "attempt") {
+            if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+              document.documentElement.requestFullscreen().catch(() => {});
+            }
+          } else {
+            clearInterval(fullscreenInterval);
+            fullscreenInterval = null;
+          }
+        }, 5000);
+      }
+    }
+
+    function exitFullscreenIfNeeded() {
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+  </script>
+</body>
+</html>
