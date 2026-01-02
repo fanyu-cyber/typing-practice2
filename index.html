@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Typing Practice (Zhuyin/Pinyin) - Lesson 2-4</title>
+  <title>Typing Practice (Zhuyin/Pinyin) - Lesson 2-4 + 自訂打字</title>
   <style>
     :root{
       --bg:#0f172a;
@@ -197,7 +197,9 @@
 <body>
 <header>
   <h1>學生打字練習（注音 / 拼音）</h1>
-  <div class="sub">Lesson 2–4｜作答頁(1/3/5)：對的不變色、錯字紅｜答案頁(2/4/6)：對綠錯紅 + 顯示正確注音/拼音｜每輪作答都計時</div>
+  <div class="sub">
+    Lesson 2–4｜作答頁(1/3/5)：對的不變色、錯字紅｜答案頁(2/4/6)：對綠錯紅 + 顯示正確注音/拼音｜每輪作答都計時
+  </div>
 </header>
 
 <main>
@@ -210,7 +212,7 @@
       </div>
 
       <div>
-        <div class="small">1) 先選擇輸入模式 2) 選 Lesson 3) 按開始</div>
+        <div class="small">1) 先選擇輸入模式 2) 選 Lesson 或自訂 3) 開始</div>
         <div class="seg">
           <button id="btnZhuyin" type="button" class="active">注音</button>
           <button id="btnPinyin" type="button">拼音</button>
@@ -226,7 +228,9 @@
         </div>
       </div>
 
+      <!-- NEW: 打字(自訂內容) -->
       <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap">
+        <button class="btn" id="customBtn">打字</button>
         <button class="btn primary" id="startBtn">開始（第 1 次作答）</button>
         <button class="btn" id="resetBtn">重設（回到開始）</button>
       </div>
@@ -234,7 +238,8 @@
       <div style="margin-top:14px" class="small">
         防作弊（基礎版）<br/>
         - 題目區禁止選取（減少複製）<br/>
-        - 輸入框禁止貼上（Ctrl/Cmd+V 無效）
+        - 輸入框禁止貼上（Ctrl/Cmd+V 無效）<br/>
+        - 自訂「打字」內容框：不可複製 / 不可貼上 / 不可剪下
       </div>
     </section>
 
@@ -301,15 +306,11 @@ const LESSON_TEXT = {
 };
 
 /** =======================
- *  Char -> Symbol mapping
- *  重要提醒：要做到「以字對應完整注音/拼音計分」需要完整字典。
- *  這份先維持：答案頁顯示「字(符號)」，若字典缺字會顯示 □ 方便你補齊。
+ *  Char -> Symbol mapping (minimal placeholder)
  *  ======================= */
 const MAP = {
-  // punctuation & whitespace handled separately
-  "一": { zhuyin:"ㄧˋ", pinyin:"yì" }, // 你指定：一起/一般 的「一」四聲
+  "一": { zhuyin:"ㄧˋ", pinyin:"yì" },
   "爸": { zhuyin:"ㄅㄚˋ", pinyin:"bà" },
-  // 爸爸：第二個爸應是輕聲，但這需要「詞級」處理。此版先保留單字映射。
 };
 
 const PUNCS = new Set(["，","。","、","（","）","？","！","；","：","「","」","『","』","“","”","…","—"]);
@@ -374,7 +375,7 @@ function evaluateByLineAndPosition(target, userRaw, mode){
         continue;
       }
 
-      const typedCh = uChars[ci] ?? ""; // 沒打到就是空
+      const typedCh = uChars[ci] ?? "";
       const ok = (typedCh === ch);
 
       // 作答頁：對的不變色；錯紅
@@ -419,6 +420,7 @@ const lesson4Btn = document.getElementById("lesson4");
 
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
+const customBtn = document.getElementById("customBtn");
 
 /** =======================
  *  State
@@ -426,7 +428,7 @@ const resetBtn = document.getElementById("resetBtn");
 let state = {
   mode: "zhuyin",
   lesson: "2",
-  page: 0, // 0 not started; 1 typing; 2 review; 3 typing; 4 review; 5 typing; 6 review(final)
+  page: 0,
   target: "",
   input: "",
   lastEval: null,
@@ -437,12 +439,29 @@ let state = {
   timerRunning: false,
   roundStartMs: 0,
   roundElapsedMs: 0,
-  // store times for each round (1/2/3)
-  roundTimes: { 1: 0, 2: 0, 3: 0 }
+  roundTimes: { 1: 0, 2: 0, 3: 0 },
+
+  // NEW: custom input content
+  customDraft: defaultCustomDraft(),
+  customLocked: ""
 };
+
+function defaultCustomDraft(){
+  const lines = [];
+  for (let i=1;i<=10;i++) lines.push(`${i}.`);
+  return lines.join("\n");
+}
 
 function isTypingPage(p){ return p===1 || p===3 || p===5; }
 function isReviewPage(p){ return p===2 || p===4 || p===6; }
+
+// NEW: custom pages
+// 7 = 自訂內容輸入頁（可編輯，禁複製貼上）
+// 8 = 自訂內容確認頁（唯讀，答案不可更動）
+// 然後按「開始」進入第 1 次作答（page=1）
+function isCustomEditPage(p){ return p===7; }
+function isCustomConfirmPage(p){ return p===8; }
+
 function currentRoundIndex(){
   if (state.page===1 || state.page===2) return 1;
   if (state.page===3 || state.page===4) return 2;
@@ -451,11 +470,15 @@ function currentRoundIndex(){
 }
 
 function loadTarget(){
-  state.target = LESSON_TEXT[state.lesson] || "";
+  if (state.lesson === "custom") {
+    state.target = state.customLocked || "";
+  } else {
+    state.target = LESSON_TEXT[state.lesson] || "";
+  }
 }
 
 /** =======================
- *  Anti copy/paste
+ *  Anti copy/paste (global typing box)
  *  ======================= */
 document.addEventListener("copy", (e)=>e.preventDefault());
 document.addEventListener("cut", (e)=>e.preventDefault());
@@ -529,7 +552,6 @@ function setMode(mode){
   btnZhuyin.classList.toggle("active", mode==="zhuyin");
   btnPinyin.classList.toggle("active", mode==="pinyin");
   modeBadge.textContent = `目前：${mode==="zhuyin" ? "注音" : "拼音"}`;
-  // 只在尚未開始或答案頁更新顯示內容即可
   render();
 }
 btnZhuyin.addEventListener("click", ()=>setMode("zhuyin"));
@@ -540,9 +562,8 @@ function setLesson(lesson){
   lesson2Btn.classList.toggle("active", lesson==="2");
   lesson3Btn.classList.toggle("active", lesson==="3");
   lesson4Btn.classList.toggle("active", lesson==="4");
-  loadTarget();
-  // 尚未開始時，右側顯示文章
-  if (state.page===0){
+
+  if (state.page === 0) {
     articleBox.textContent = "請先選擇「注音 / 拼音」與 Lesson，然後按「開始」。";
   }
   render();
@@ -552,7 +573,31 @@ lesson3Btn.addEventListener("click", ()=>setLesson("3"));
 lesson4Btn.addEventListener("click", ()=>setLesson("4"));
 
 /** =======================
- *  Render
+ *  NEW: custom flow
+ *  ======================= */
+function enterCustomEdit(){
+  state.page = 7;
+  // 保留 state.customDraft（可再進來繼續編）
+  render();
+}
+function lockCustomAndConfirm(){
+  // 鎖定內容後，不可再改
+  state.customLocked = (state.customDraft || "").trimEnd();
+  state.lesson = "custom"; // target will come from customLocked
+  state.page = 8;
+  render();
+}
+function startTypingFromCustom(){
+  // 直接進入第 1 次作答
+  enterTypingPage(1);
+}
+
+customBtn.addEventListener("click", ()=>{
+  enterCustomEdit();
+});
+
+/** =======================
+ *  Render helpers
  *  ======================= */
 function setStageTitle(){
   const titles = {
@@ -562,32 +607,44 @@ function setStageTitle(){
     3: "第 2 次作答（作答中）",
     4: "第 2 次答案公布",
     5: "第 3 次作答（作答中）",
-    6: "最終答案公布"
+    6: "最終答案公布",
+    7: "自訂內容（打字）",
+    8: "自訂內容確認（不可更動）"
   };
   stageName.innerHTML = `<b>${titles[state.page] || "—"}</b>`;
 }
+
 function setActionButton(){
   if (state.page === 1){ actionBtn.disabled=false; actionBtn.textContent="第一次完成"; }
   else if (state.page === 2){ actionBtn.disabled=false; actionBtn.textContent="Second try"; }
   else if (state.page === 3){ actionBtn.disabled=false; actionBtn.textContent="第二次完成"; }
   else if (state.page === 4){ actionBtn.disabled=false; actionBtn.textContent="Third try"; }
   else if (state.page === 5){ actionBtn.disabled=false; actionBtn.textContent="最後一次完成"; }
+  else if (state.page === 7){ actionBtn.disabled=false; actionBtn.textContent="完成（鎖定內容）"; }
+  else if (state.page === 8){ actionBtn.disabled=false; actionBtn.textContent="開始（第 1 次作答）"; }
   else { actionBtn.disabled=true; actionBtn.textContent="開始"; }
 }
+
 function setHintText(){
   if (isTypingPage(state.page)){
-    hint.textContent = "作答頁：對的不變色、錯字紅。請依文章換行對齊輸入（可換行，不要硬把下一行接在同一行）。";
+    hint.textContent = "作答頁：對的不變色、錯字紅。請依文章換行對齊輸入（可換行）。";
   } else if (isReviewPage(state.page)){
-    hint.textContent = "答案頁：對綠錯紅，並顯示字(正確注音/拼音)。下方會顯示本輪打字時間。";
+    hint.textContent = "答案頁：對綠錯紅，並顯示字(正確注音/拼音)。";
+  } else if (isCustomEditPage(state.page)){
+    hint.textContent = "請在下方輸入自訂內容（預設 1.–10.）。此框不可複製/貼上/剪下。按完成後進入下一頁，內容會鎖定不可更動。";
+  } else if (isCustomConfirmPage(state.page)){
+    hint.textContent = "內容已鎖定（不可更動）。按下開始會進入原本的打字練習流程。";
   } else {
     hint.textContent = "";
   }
 }
-function applyInputEnabled(enabled){
+
+function applyInputEnabled(enabled, placeholder){
   inputBox.disabled = !enabled;
-  inputBox.placeholder = enabled ? "請在此輸入（可換行）" : "（此頁不需輸入）";
+  inputBox.placeholder = placeholder || (enabled ? "請在此輸入（可換行）" : "（此頁不需輸入）");
   if (!enabled) inputBox.value = "";
 }
+
 function applyFullscreenPolicy(){
   if (isTypingPage(state.page)){
     fullscreenBtn.style.display="";
@@ -597,24 +654,20 @@ function applyFullscreenPolicy(){
     fullscreenBtn.style.display="none";
   }
 }
-function renderStats(){
-  const idx = currentRoundIndex();
-  const timeMs = state.roundTimes[idx] || 0;
 
+function renderStats(){
   if (isReviewPage(state.page)){
+    const idx = currentRoundIndex();
+    const timeMs = state.roundTimes[idx] || 0;
     statsEl.innerHTML = `
       <div>本輪打字時間：<strong class="mono">${formatTime(timeMs)}</strong></div>
       <div>本輪跳出全螢幕次數：<strong class="mono">${state.fsExitCount}</strong></div>
-      <div class="small">（若你要加「符號扣分/總分」我也可以在這裡一起顯示）</div>
-    `;
-  } else if (isTypingPage(state.page)){
-    statsEl.innerHTML = `
-      <div class="small">提示：作答頁只標紅錯字；時間會在完成後的答案頁顯示。</div>
     `;
   } else {
     statsEl.textContent = "";
   }
 }
+
 function render(){
   setStageTitle();
   setActionButton();
@@ -623,20 +676,63 @@ function render(){
 
   finalTip.style.display = (state.page===6) ? "" : "none";
 
+  // custom edit page
+  if (state.page === 7){
+    // 題目框此頁變成「說明區」即可
+    articleBox.classList.remove("noSelect");
+    articleBox.textContent = "請在下方輸入自訂內容（打字框內不可複製/貼上/剪下）。完成後將鎖定內容。";
+
+    applyInputEnabled(true, "請輸入自訂內容…（不可複製/貼上/剪下）");
+    inputBox.value = state.customDraft || defaultCustomDraft();
+
+    // 專屬：禁止 copy/cut/paste（只針對這個自訂框）
+    inputBox.oncopy = (e)=>e.preventDefault();
+    inputBox.oncut = (e)=>e.preventDefault();
+    inputBox.onpaste = (e)=>e.preventDefault();
+
+    // 不要全螢幕、不要計時
+    if (timerTick) clearInterval(timerTick);
+    timerTick = null;
+    timerEl.textContent = "00:00";
+    fullscreenBtn.style.display="none";
+    statsEl.textContent = "";
+    return;
+  }
+
+  // custom confirm page
+  if (state.page === 8){
+    articleBox.classList.add("noSelect");
+    articleBox.textContent = state.customLocked || "";
+    applyInputEnabled(false);
+    inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = null;
+
+    if (timerTick) clearInterval(timerTick);
+    timerTick = null;
+    timerEl.textContent = "00:00";
+    fullscreenBtn.style.display="none";
+    statsEl.textContent = "";
+    return;
+  }
+
+  // default start
   if (state.page===0){
+    articleBox.classList.add("noSelect");
     applyInputEnabled(false);
     timerEl.textContent = "00:00";
     statsEl.textContent = "";
     articleBox.textContent = "請先選擇「注音 / 拼音」與 Lesson，然後按「開始」。";
+    inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = null;
     return;
   }
+
+  // regular pages
+  inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = (e)=>e.preventDefault();
 
   loadTarget();
 
   if (isTypingPage(state.page)){
-    applyInputEnabled(true);
-
-    // 初進作答頁：顯示純文章
+    articleBox.classList.add("noSelect");
+    applyInputEnabled(true, "請在此輸入（可換行）");
     if (!state.input){
       articleBox.textContent = state.target;
       inputBox.value = "";
@@ -649,9 +745,9 @@ function render(){
   }
 
   if (isReviewPage(state.page)){
+    articleBox.classList.add("noSelect");
     applyInputEnabled(false);
-    applyFullscreenPolicy(); // will disable button
-
+    applyFullscreenPolicy();
     if (state.lastEval){
       articleBox.innerHTML = state.lastEval.reviewHtml;
     } else {
@@ -663,9 +759,13 @@ function render(){
 }
 
 /** =======================
- *  Input handling (typing pages)
+ *  Input handling (typing pages + custom edit)
  *  ======================= */
 inputBox.addEventListener("input", ()=>{
+  if (isCustomEditPage(state.page)){
+    state.customDraft = inputBox.value;
+    return;
+  }
   if (!isTypingPage(state.page)) return;
 
   state.input = inputBox.value;
@@ -687,6 +787,11 @@ function resetAll(){
   state.roundTimes = {1:0,2:0,3:0};
   if (timerTick) clearInterval(timerTick);
   timerTick = null;
+
+  // custom keep draft but unlock content (讓你下次可以重新輸入)
+  state.customLocked = "";
+  if (!state.customDraft) state.customDraft = defaultCustomDraft();
+
   exitFullscreen().catch(()=>{});
   render();
 }
@@ -695,13 +800,14 @@ function enterTypingPage(page){
   state.page = page;
   state.input = "";
   state.lastEval = null;
-  state.fsExitCount = 0; // 每輪重新計（你也可改成累積）
+  state.fsExitCount = 0;
   fsCountEl.textContent = "0";
   startRoundTimer();
   render();
 }
 
 startBtn.addEventListener("click", ()=>{
+  // 如果已經在 custom confirm 且 lesson=custom，按開始一樣會進 typing
   enterTypingPage(1);
 });
 
@@ -710,7 +816,17 @@ resetBtn.addEventListener("click", ()=>{
 });
 
 actionBtn.addEventListener("click", ()=>{
-  // 1 -> 2
+  // custom flow
+  if (state.page===7){
+    lockCustomAndConfirm();
+    return;
+  }
+  if (state.page===8){
+    startTypingFromCustom();
+    return;
+  }
+
+  // normal flow
   if (state.page===1){
     stopRoundTimer();
     state.lastEval = evaluateByLineAndPosition(state.target, state.input, state.mode);
@@ -719,12 +835,10 @@ actionBtn.addEventListener("click", ()=>{
     render();
     return;
   }
-  // 2 -> 3
   if (state.page===2){
     enterTypingPage(3);
     return;
   }
-  // 3 -> 4
   if (state.page===3){
     stopRoundTimer();
     state.lastEval = evaluateByLineAndPosition(state.target, state.input, state.mode);
@@ -733,12 +847,10 @@ actionBtn.addEventListener("click", ()=>{
     render();
     return;
   }
-  // 4 -> 5
   if (state.page===4){
     enterTypingPage(5);
     return;
   }
-  // 5 -> 6
   if (state.page===5){
     stopRoundTimer();
     state.lastEval = evaluateByLineAndPosition(state.target, state.input, state.mode);
