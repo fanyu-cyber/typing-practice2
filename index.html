@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Typing Practice (Zhuyin/Pinyin) - Lesson 2-4 + 自訂打字</title>
+  <title>Typing Practice + 打字 + 作文（注音/拼音）</title>
   <style>
     :root{
       --bg:#0f172a;
@@ -196,9 +196,10 @@
 
 <body>
 <header>
-  <h1>學生打字練習（注音 / 拼音）</h1>
+  <h1>學生打字練習（注音 / 拼音）＋打字＋作文</h1>
   <div class="sub">
-    Lesson 2–4｜作答頁(1/3/5)：對的不變色、錯字紅｜答案頁(2/4/6)：對綠錯紅 + 顯示正確注音/拼音｜每輪作答都計時
+    打字練習：作答頁(1/3/5)錯字紅｜答案頁(2/4/6)對綠錯紅+顯示符號｜作答頁全螢幕+跳出計數+5秒跳回｜每輪計時<br/>
+    作文：只有文字輸入框 + 完成後鎖定不可修改
   </div>
 </header>
 
@@ -212,7 +213,7 @@
       </div>
 
       <div>
-        <div class="small">1) 先選擇輸入模式 2) 選 Lesson 或自訂 3) 開始</div>
+        <div class="small">輸入模式（只影響「打字練習」答案顯示）</div>
         <div class="seg">
           <button id="btnZhuyin" type="button" class="active">注音</button>
           <button id="btnPinyin" type="button">拼音</button>
@@ -220,7 +221,7 @@
       </div>
 
       <div style="margin-top:12px">
-        <div class="small">Lesson</div>
+        <div class="small">Lesson（打字練習）</div>
         <div class="lessonBar">
           <button id="lesson2" class="active" type="button">Lesson 2</button>
           <button id="lesson3" type="button">Lesson 3</button>
@@ -228,9 +229,9 @@
         </div>
       </div>
 
-      <!-- NEW: 打字(自訂內容) -->
       <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap">
         <button class="btn" id="customBtn">打字</button>
+        <button class="btn" id="essayBtn">作文</button>
         <button class="btn primary" id="startBtn">開始（第 1 次作答）</button>
         <button class="btn" id="resetBtn">重設（回到開始）</button>
       </div>
@@ -238,8 +239,9 @@
       <div style="margin-top:14px" class="small">
         防作弊（基礎版）<br/>
         - 題目區禁止選取（減少複製）<br/>
-        - 輸入框禁止貼上（Ctrl/Cmd+V 無效）<br/>
-        - 自訂「打字」內容框：不可複製 / 不可貼上 / 不可剪下
+        - 作答輸入框禁止貼上（Ctrl/Cmd+V 無效）<br/>
+        - 「打字」自訂內容框：不可複製/貼上/剪下<br/>
+        - 「作文」輸入框：不可複製/貼上/剪下，完成後鎖定
       </div>
     </section>
 
@@ -248,12 +250,12 @@
       <div class="titleRow">
         <div id="stageName"><b>尚未開始</b></div>
         <div style="display:flex; gap:10px; flex-wrap:wrap">
-          <span class="pill">本輪計時：<span id="timer" class="mono">00:00</span></span>
-          <span class="pill">全螢幕跳出：<span id="fsCount" class="mono">0</span></span>
+          <span class="pill" id="timerPill">本輪計時：<span id="timer" class="mono">00:00</span></span>
+          <span class="pill" id="fsPill">全螢幕跳出：<span id="fsCount" class="mono">0</span></span>
         </div>
       </div>
 
-      <div class="articleBox noSelect" id="articleBox">請先選擇「注音 / 拼音」與 Lesson，然後按「開始」。</div>
+      <div class="articleBox noSelect" id="articleBox">請先選擇 Lesson（或按「打字 / 作文」），再開始。</div>
 
       <p class="hint" id="hint"></p>
 
@@ -347,7 +349,7 @@ function formatTime(ms){
 }
 
 /**
- * 評估：以「文章出現內容」的行數與字位為基準（你要求的換行規則）
+ * 評估：以「文章出現內容」的行數與字位為基準
  * - 作答頁(1/3/5)：對的不變色；錯的紅
  * - 答案頁(2/4/6)：對綠錯紅 + 顯示字(正確符號)
  */
@@ -378,10 +380,8 @@ function evaluateByLineAndPosition(target, userRaw, mode){
       const typedCh = uChars[ci] ?? "";
       const ok = (typedCh === ch);
 
-      // 作答頁：對的不變色；錯紅
       tParts.push(`<span class="char ${ok ? "" : "bad"}">${escapeHtml(ch)}</span>`);
 
-      // 答案頁：對綠錯紅 + 顯示正確符號
       const sym = getSymbolForChar(ch, mode);
       rParts.push(`<span class="char ${ok ? "ok" : "bad"}">${escapeHtml(ch)}(${escapeHtml(sym)})</span>`);
     }
@@ -409,6 +409,8 @@ const timerEl = document.getElementById("timer");
 const fsCountEl = document.getElementById("fsCount");
 const statsEl = document.getElementById("stats");
 const finalTip = document.getElementById("finalTip");
+const timerPill = document.getElementById("timerPill");
+const fsPill = document.getElementById("fsPill");
 
 const btnZhuyin = document.getElementById("btnZhuyin");
 const btnPinyin = document.getElementById("btnPinyin");
@@ -421,6 +423,7 @@ const lesson4Btn = document.getElementById("lesson4");
 const startBtn = document.getElementById("startBtn");
 const resetBtn = document.getElementById("resetBtn");
 const customBtn = document.getElementById("customBtn");
+const essayBtn = document.getElementById("essayBtn");
 
 /** =======================
  *  State
@@ -441,9 +444,13 @@ let state = {
   roundElapsedMs: 0,
   roundTimes: { 1: 0, 2: 0, 3: 0 },
 
-  // NEW: custom input content
+  // custom "打字"
   customDraft: defaultCustomDraft(),
-  customLocked: ""
+  customLocked: "",
+
+  // essay
+  essayDraft: "",
+  essayLocked: ""
 };
 
 function defaultCustomDraft(){
@@ -454,20 +461,24 @@ function defaultCustomDraft(){
 
 function isTypingPage(p){ return p===1 || p===3 || p===5; }
 function isReviewPage(p){ return p===2 || p===4 || p===6; }
-
-// NEW: custom pages
-// 7 = 自訂內容輸入頁（可編輯，禁複製貼上）
-// 8 = 自訂內容確認頁（唯讀，答案不可更動）
-// 然後按「開始」進入第 1 次作答（page=1）
-function isCustomEditPage(p){ return p===7; }
-function isCustomConfirmPage(p){ return p===8; }
-
 function currentRoundIndex(){
   if (state.page===1 || state.page===2) return 1;
   if (state.page===3 || state.page===4) return 2;
   if (state.page===5 || state.page===6) return 3;
   return 1;
 }
+
+// custom pages
+// 7 = 自訂內容輸入頁（打字）
+// 8 = 自訂內容確認頁
+function isCustomEditPage(p){ return p===7; }
+function isCustomConfirmPage(p){ return p===8; }
+
+// essay pages
+// 9 = 作文輸入頁
+// 10 = 作文鎖定頁
+function isEssayEditPage(p){ return p===9; }
+function isEssayLockedPage(p){ return p===10; }
 
 function loadTarget(){
   if (state.lesson === "custom") {
@@ -478,7 +489,7 @@ function loadTarget(){
 }
 
 /** =======================
- *  Anti copy/paste (global typing box)
+ *  Anti copy/paste (global)
  *  ======================= */
 document.addEventListener("copy", (e)=>e.preventDefault());
 document.addEventListener("cut", (e)=>e.preventDefault());
@@ -562,9 +573,8 @@ function setLesson(lesson){
   lesson2Btn.classList.toggle("active", lesson==="2");
   lesson3Btn.classList.toggle("active", lesson==="3");
   lesson4Btn.classList.toggle("active", lesson==="4");
-
   if (state.page === 0) {
-    articleBox.textContent = "請先選擇「注音 / 拼音」與 Lesson，然後按「開始」。";
+    articleBox.textContent = "請先選擇 Lesson（或按「打字 / 作文」），再開始。";
   }
   render();
 }
@@ -573,31 +583,39 @@ lesson3Btn.addEventListener("click", ()=>setLesson("3"));
 lesson4Btn.addEventListener("click", ()=>setLesson("4"));
 
 /** =======================
- *  NEW: custom flow
+ *  NEW: custom flow (打字)
  *  ======================= */
 function enterCustomEdit(){
   state.page = 7;
-  // 保留 state.customDraft（可再進來繼續編）
   render();
 }
 function lockCustomAndConfirm(){
-  // 鎖定內容後，不可再改
   state.customLocked = (state.customDraft || "").trimEnd();
-  state.lesson = "custom"; // target will come from customLocked
+  state.lesson = "custom";
   state.page = 8;
   render();
 }
 function startTypingFromCustom(){
-  // 直接進入第 1 次作答
   enterTypingPage(1);
 }
-
-customBtn.addEventListener("click", ()=>{
-  enterCustomEdit();
-});
+customBtn.addEventListener("click", ()=> enterCustomEdit());
 
 /** =======================
- *  Render helpers
+ *  NEW: essay flow (作文)
+ *  ======================= */
+function enterEssayEdit(){
+  state.page = 9;
+  render();
+}
+function lockEssay(){
+  state.essayLocked = (state.essayDraft || "").trimEnd();
+  state.page = 10;
+  render();
+}
+essayBtn.addEventListener("click", ()=> enterEssayEdit());
+
+/** =======================
+ *  Render
  *  ======================= */
 function setStageTitle(){
   const titles = {
@@ -609,7 +627,9 @@ function setStageTitle(){
     5: "第 3 次作答（作答中）",
     6: "最終答案公布",
     7: "自訂內容（打字）",
-    8: "自訂內容確認（不可更動）"
+    8: "自訂內容確認（不可更動）",
+    9: "作文（輸入）",
+    10:"作文（已鎖定不可更動）"
   };
   stageName.innerHTML = `<b>${titles[state.page] || "—"}</b>`;
 }
@@ -622,6 +642,7 @@ function setActionButton(){
   else if (state.page === 5){ actionBtn.disabled=false; actionBtn.textContent="最後一次完成"; }
   else if (state.page === 7){ actionBtn.disabled=false; actionBtn.textContent="完成（鎖定內容）"; }
   else if (state.page === 8){ actionBtn.disabled=false; actionBtn.textContent="開始（第 1 次作答）"; }
+  else if (state.page === 9){ actionBtn.disabled=false; actionBtn.textContent="完成（鎖定作文）"; }
   else { actionBtn.disabled=true; actionBtn.textContent="開始"; }
 }
 
@@ -631,9 +652,13 @@ function setHintText(){
   } else if (isReviewPage(state.page)){
     hint.textContent = "答案頁：對綠錯紅，並顯示字(正確注音/拼音)。";
   } else if (isCustomEditPage(state.page)){
-    hint.textContent = "請在下方輸入自訂內容（預設 1.–10.）。此框不可複製/貼上/剪下。按完成後進入下一頁，內容會鎖定不可更動。";
+    hint.textContent = "打字：請在下方輸入自訂內容（預設 1.–10.）。此框不可複製/貼上/剪下。按完成後鎖定。";
   } else if (isCustomConfirmPage(state.page)){
-    hint.textContent = "內容已鎖定（不可更動）。按下開始會進入原本的打字練習流程。";
+    hint.textContent = "打字內容已鎖定（不可更動）。按下開始會進入打字練習流程。";
+  } else if (isEssayEditPage(state.page)){
+    hint.textContent = "作文：請在下方輸入文字。此框不可複製/貼上/剪下。按完成後鎖定不可修改。";
+  } else if (isEssayLockedPage(state.page)){
+    hint.textContent = "作文內容已鎖定（不可更動）。請截圖或依老師指示提交。";
   } else {
     hint.textContent = "";
   }
@@ -655,6 +680,13 @@ function applyFullscreenPolicy(){
   }
 }
 
+function showOrHidePills(){
+  // 作文/打字自訂頁：不需要顯示計時與全螢幕計數（避免混淆）
+  const hide = isCustomEditPage(state.page) || isCustomConfirmPage(state.page) || isEssayEditPage(state.page) || isEssayLockedPage(state.page) || state.page===0;
+  timerPill.style.display = hide ? "none" : "";
+  fsPill.style.display = hide ? "none" : "";
+}
+
 function renderStats(){
   if (isReviewPage(state.page)){
     const idx = currentRoundIndex();
@@ -663,6 +695,8 @@ function renderStats(){
       <div>本輪打字時間：<strong class="mono">${formatTime(timeMs)}</strong></div>
       <div>本輪跳出全螢幕次數：<strong class="mono">${state.fsExitCount}</strong></div>
     `;
+  } else if (isEssayLockedPage(state.page)){
+    statsEl.innerHTML = `<div class="small">（此頁內容已鎖定，無法修改）</div>`;
   } else {
     statsEl.textContent = "";
   }
@@ -672,67 +706,107 @@ function render(){
   setStageTitle();
   setActionButton();
   setHintText();
-  fsCountEl.textContent = String(state.fsExitCount);
+  showOrHidePills();
 
   finalTip.style.display = (state.page===6) ? "" : "none";
 
-  // custom edit page
-  if (state.page === 7){
-    // 題目框此頁變成「說明區」即可
+  // ========= 作文流程 =========
+  if (state.page === 9){
+    // 作文輸入頁：只給輸入框，題目區顯示簡短提示
     articleBox.classList.remove("noSelect");
-    articleBox.textContent = "請在下方輸入自訂內容（打字框內不可複製/貼上/剪下）。完成後將鎖定內容。";
+    articleBox.textContent = "作文模式：請在下方輸入文字，完成後會鎖定不可修改。";
+    applyInputEnabled(true, "請輸入作文內容…");
 
-    applyInputEnabled(true, "請輸入自訂內容…（不可複製/貼上/剪下）");
-    inputBox.value = state.customDraft || defaultCustomDraft();
+    inputBox.value = state.essayDraft || "";
 
-    // 專屬：禁止 copy/cut/paste（只針對這個自訂框）
+    // 作文框：不可複製/貼上/剪下
     inputBox.oncopy = (e)=>e.preventDefault();
-    inputBox.oncut = (e)=>e.preventDefault();
-    inputBox.onpaste = (e)=>e.preventDefault();
+    inputBox.oncut  = (e)=>e.preventDefault();
+    inputBox.onpaste= (e)=>e.preventDefault();
 
-    // 不要全螢幕、不要計時
+    // 不要計時/全螢幕
     if (timerTick) clearInterval(timerTick);
     timerTick = null;
-    timerEl.textContent = "00:00";
     fullscreenBtn.style.display="none";
     statsEl.textContent = "";
     return;
   }
+  if (state.page === 10){
+    articleBox.classList.add("noSelect");
+    articleBox.textContent = "作文內容（已鎖定）：";
+    applyInputEnabled(false);
 
-  // custom confirm page
+    // 顯示鎖定內容在輸入框（唯讀展示）
+    inputBox.disabled = true;
+    inputBox.value = state.essayLocked || "";
+    inputBox.style.opacity = "1";
+
+    // 移除事件攔截（仍然全域阻止 copy/cut，但這裡也不用）
+    inputBox.oncopy = (e)=>e.preventDefault();
+    inputBox.oncut  = (e)=>e.preventDefault();
+    inputBox.onpaste= (e)=>e.preventDefault();
+
+    fullscreenBtn.style.display="none";
+    if (timerTick) clearInterval(timerTick);
+    timerTick = null;
+
+    renderStats();
+    return;
+  }
+
+  // ========= 打字自訂流程 =========
+  if (state.page === 7){
+    articleBox.classList.remove("noSelect");
+    articleBox.textContent = "打字（自訂內容）：請在下方輸入內容（預設 1.–10.），完成後鎖定。";
+    applyInputEnabled(true, "請輸入自訂內容…（不可複製/貼上/剪下）");
+    inputBox.value = state.customDraft || defaultCustomDraft();
+
+    inputBox.oncopy = (e)=>e.preventDefault();
+    inputBox.oncut  = (e)=>e.preventDefault();
+    inputBox.onpaste= (e)=>e.preventDefault();
+
+    if (timerTick) clearInterval(timerTick);
+    timerTick = null;
+    fullscreenBtn.style.display="none";
+    statsEl.textContent = "";
+    return;
+  }
   if (state.page === 8){
     articleBox.classList.add("noSelect");
     articleBox.textContent = state.customLocked || "";
     applyInputEnabled(false);
-    inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = null;
 
+    inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = (e)=>e.preventDefault();
+    fullscreenBtn.style.display="none";
     if (timerTick) clearInterval(timerTick);
     timerTick = null;
-    timerEl.textContent = "00:00";
-    fullscreenBtn.style.display="none";
     statsEl.textContent = "";
     return;
   }
 
-  // default start
+  // ========= 初始 =========
   if (state.page===0){
     articleBox.classList.add("noSelect");
     applyInputEnabled(false);
-    timerEl.textContent = "00:00";
     statsEl.textContent = "";
-    articleBox.textContent = "請先選擇「注音 / 拼音」與 Lesson，然後按「開始」。";
-    inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = null;
+    articleBox.textContent = "請先選擇 Lesson（或按「打字 / 作文」），再開始。";
+    if (timerTick) clearInterval(timerTick);
+    timerTick = null;
+    fullscreenBtn.style.display="none";
     return;
   }
 
-  // regular pages
-  inputBox.oncopy = null; inputBox.oncut = null; inputBox.onpaste = (e)=>e.preventDefault();
+  // ========= 正常打字練習 =========
+  inputBox.oncopy = null;
+  inputBox.oncut  = null;
+  inputBox.onpaste= (e)=>e.preventDefault();
 
   loadTarget();
 
   if (isTypingPage(state.page)){
     articleBox.classList.add("noSelect");
     applyInputEnabled(true, "請在此輸入（可換行）");
+
     if (!state.input){
       articleBox.textContent = state.target;
       inputBox.value = "";
@@ -748,6 +822,7 @@ function render(){
     articleBox.classList.add("noSelect");
     applyInputEnabled(false);
     applyFullscreenPolicy();
+
     if (state.lastEval){
       articleBox.innerHTML = state.lastEval.reviewHtml;
     } else {
@@ -759,11 +834,15 @@ function render(){
 }
 
 /** =======================
- *  Input handling (typing pages + custom edit)
+ *  Input handling
  *  ======================= */
 inputBox.addEventListener("input", ()=>{
   if (isCustomEditPage(state.page)){
     state.customDraft = inputBox.value;
+    return;
+  }
+  if (isEssayEditPage(state.page)){
+    state.essayDraft = inputBox.value;
     return;
   }
   if (!isTypingPage(state.page)) return;
@@ -781,6 +860,7 @@ function resetAll(){
   state.input = "";
   state.lastEval = null;
   state.fsExitCount = 0;
+
   state.timerRunning = false;
   state.roundStartMs = 0;
   state.roundElapsedMs = 0;
@@ -788,9 +868,12 @@ function resetAll(){
   if (timerTick) clearInterval(timerTick);
   timerTick = null;
 
-  // custom keep draft but unlock content (讓你下次可以重新輸入)
+  // custom keep draft; unlock
   state.customLocked = "";
   if (!state.customDraft) state.customDraft = defaultCustomDraft();
+
+  // essay keep draft; unlock
+  state.essayLocked = "";
 
   exitFullscreen().catch(()=>{});
   render();
@@ -806,27 +889,35 @@ function enterTypingPage(page){
   render();
 }
 
-startBtn.addEventListener("click", ()=>{
-  // 如果已經在 custom confirm 且 lesson=custom，按開始一樣會進 typing
-  enterTypingPage(1);
-});
+startBtn.addEventListener("click", ()=> enterTypingPage(1));
+resetBtn.addEventListener("click", ()=> resetAll());
 
-resetBtn.addEventListener("click", ()=>{
-  resetAll();
-});
+customBtn.addEventListener("click", ()=>{ state.page=7; render(); });
+essayBtn.addEventListener("click", ()=>{ state.page=9; render(); });
 
 actionBtn.addEventListener("click", ()=>{
-  // custom flow
+  // essay
+  if (state.page===9){
+    state.essayLocked = (state.essayDraft || "").trimEnd();
+    state.page = 10;
+    render();
+    return;
+  }
+
+  // custom
   if (state.page===7){
-    lockCustomAndConfirm();
+    state.customLocked = (state.customDraft || "").trimEnd();
+    state.lesson = "custom";
+    state.page = 8;
+    render();
     return;
   }
   if (state.page===8){
-    startTypingFromCustom();
+    enterTypingPage(1);
     return;
   }
 
-  // normal flow
+  // normal typing flow
   if (state.page===1){
     stopRoundTimer();
     state.lastEval = evaluateByLineAndPosition(state.target, state.input, state.mode);
